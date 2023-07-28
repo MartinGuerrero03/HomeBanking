@@ -1,4 +1,6 @@
-﻿using System.Linq;
+﻿using System;
+using System.Linq;
+using System.Security.Principal;
 
 namespace HomeBanking.Models
 {
@@ -6,6 +8,7 @@ namespace HomeBanking.Models
     {
         public static void DbInitialize(HomeBankingContext context) 
         {
+            //Datos de prueba para Entidad Client 
             if (!context.Clients.Any())
             {
                 var clients = new Client[] {
@@ -22,8 +25,33 @@ namespace HomeBanking.Models
                     context.Clients.Add(client);
                 }
 
-                //guardamos
+                //guardar
                 context.SaveChanges();
+            }
+
+            //Datos de prueba para Entidad Account
+            if (!context.Accounts.Any())
+            {
+                var clientMartin = context.Clients.FirstOrDefault(c => c.Email == "martin@gmail.com");
+                if (clientMartin != null) 
+                {
+                    var accounts = new Account[]
+                    {
+                        new Account
+                        {
+                            ClientId = clientMartin.Id,
+                            CreationDate = DateTime.Now,
+                            Number = string.Empty,
+                            Balance = 0
+                        }
+                    };
+
+                    foreach(Account account in accounts)
+                    {
+                        context.Accounts.Add(account);
+                    }
+                    context.SaveChanges();
+                }
             }
         
         }
