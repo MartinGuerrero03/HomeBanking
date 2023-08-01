@@ -1,4 +1,6 @@
 ﻿using System;
+using System.Collections;
+using System.Collections.Generic;
 
 namespace HomeBanking.Models.dtos
 {
@@ -12,6 +14,8 @@ namespace HomeBanking.Models.dtos
         public DateTime CreationDate { get; set; }
 
         public double Balance { get; set; }
+
+        public ICollection<TransactionDTO> Transactions { get; set; }
 
     }
 }
