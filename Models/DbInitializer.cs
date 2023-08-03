@@ -56,7 +56,7 @@ namespace HomeBanking.Models
             }
             
 
-            //Datos de prueba para Entidad Transactions
+            //Datos de prueba para Entidad Transaction
             if (!context.Transactions.Any())
             {
                 var account1 = context.Accounts.FirstOrDefault(c => c.Number == "VIN001");
@@ -99,6 +99,121 @@ namespace HomeBanking.Models
 
                     context.SaveChanges();
                 }
+            }
+
+            //Data de prueba para Entidad Loan
+            if (!context.Loans.Any()) 
+            {
+                var loans = new Loan[]
+                {
+                    //Se crean 3 prestamos: Hipotecario, Personal y Automotriz.
+                    new Loan
+                    {
+                        Name = "Hipotecario",
+                        MaxAmount = 500000,
+                        Payments = "12,24,36,48,60"
+                    },
+
+                    new Loan
+                    {
+                        Name = "Personal",
+                        MaxAmount = 100000,
+                        Payments = "6,12,24"
+                    },
+
+                    new Loan
+                    {
+                        Name = "Automotriz",
+                        MaxAmount = 300000,
+                        Payments = "6,12,24,36"
+                    },
+                };
+
+                foreach (Loan loan in loans) 
+                {
+                    context.Loans.Add(loan);
+                }
+
+                context.SaveChanges();
+            }
+
+            //Data de prueba para entidad ClientLoan
+            //A los clientes cargados hasta el momento (2) se les agrega un prestamo de cada tipo.
+            if (!context.ClientLoans.Any())
+            {
+                var clientMartin = context.Clients.FirstOrDefault(c => c.Email == "martin@gmail.com");
+                var loanH = context.Loans.FirstOrDefault(l => l.Name == "Hipotecario");
+                var loanP = context.Loans.FirstOrDefault(l => l.Name == "Personal");
+                var loanA = context.Loans.FirstOrDefault(l => l.Name == "Automotriz");
+
+                if (clientMartin != null && loanH != null && loanP != null && loanA != null)
+                {
+                    var clientLoanH = new ClientLoan
+                    {
+                        Amount = 400000,
+                        Payments = "60",
+                        ClientId = clientMartin.Id,
+                        LoanId = loanH.Id
+                    };
+
+                    var clientLoanP = new ClientLoan
+                    {
+                        Amount = 50000,
+                        Payments = "12",
+                        ClientId = clientMartin.Id,
+                        LoanId = loanP.Id
+                    };
+
+                    var clientLoanA = new ClientLoan
+                    {
+                        Amount = 100000,
+                        Payments = "24",
+                        ClientId = clientMartin.Id,
+                        LoanId = loanA.Id
+                    };
+
+                    context.ClientLoans.Add(clientLoanH);
+                    context.ClientLoans.Add(clientLoanP);
+                    context.ClientLoans.Add(clientLoanA);
+
+                }
+
+                var clientVictor = context.Clients.FirstOrDefault(c => c.Email == "vcoronado@gmail.com");
+                var loanH2 = context.Loans.FirstOrDefault(l => l.Name == "Hipotecario");
+                var loanP2 = context.Loans.FirstOrDefault(l => l.Name == "Personal");
+                var loanA2= context.Loans.FirstOrDefault(l => l.Name == "Automotriz");
+
+                if (clientVictor != null && loanH2 != null && loanP2 != null && loanA2 != null)
+                {
+                    var clientLoanH2 = new ClientLoan
+                    {
+                        Amount = 350000,
+                        Payments = "36",
+                        ClientId = clientVictor.Id,
+                        LoanId = loanH2.Id
+                    };
+
+                    var clientLoanP2 = new ClientLoan
+                    {
+                        Amount = 87000,
+                        Payments = "24",
+                        ClientId = clientVictor.Id,
+                        LoanId = loanP2.Id
+                    };
+
+                    var clientLoanA2 = new ClientLoan
+                    {
+                        Amount = 10000,
+                        Payments = "6",
+                        ClientId = clientVictor.Id,
+                        LoanId = loanA2.Id
+                    };
+
+                    context.ClientLoans.Add(clientLoanH2);
+                    context.ClientLoans.Add(clientLoanP2);
+                    context.ClientLoans.Add(clientLoanA2);
+                }
+                context.SaveChanges();
             }
 
         }

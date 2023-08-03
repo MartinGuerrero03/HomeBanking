@@ -34,12 +34,22 @@ namespace HomeBanking.Controllers
                         Email = client.Email,
                         FirstName = client.FirstName,
                         LastName = client.LastName,
+                        //Cuentas bancarias:
                         Accounts = client.Accounts.Select(ac => new AccountDTO
                         {
                             Id = ac.Id,
                             Balance = ac.Balance,
                             CreationDate = ac.CreationDate,
                             Number = ac.Number
+                        }).ToList(),
+                        //Prestamos:
+                        Loans = client.ClientLoans.Select(cl => new ClientLoanDTO 
+                        {
+                            Id = cl.Id,
+                            LoanId = cl.LoanId,
+                            Name = cl.Loan.Name,
+                            Amount = cl.Amount,
+                            Payments = int.Parse(cl.Payments)
                         }).ToList()
                     };
                     clientsDTO.Add(newClientDTO);
@@ -70,13 +80,23 @@ namespace HomeBanking.Controllers
                     Email = client.Email,
                     FirstName = client.FirstName,
                     LastName = client.LastName,
+                    //Cuentas:
                     Accounts = client.Accounts.Select(ac => new AccountDTO
                     {
                         Id = ac.Id,
                         Balance = ac.Balance,
                         CreationDate = ac.CreationDate,
                         Number = ac.Number
-                    }).ToList()
+                    }).ToList(),
+                    //Prestamos:
+                        Loans = client.ClientLoans.Select(cl => new ClientLoanDTO
+                        {
+                            Id = cl.Id,
+                            LoanId = cl.LoanId,
+                            Name = cl.Loan.Name,
+                            Amount = cl.Amount,
+                            Payments = int.Parse(cl.Payments)
+                        }).ToList()
                 };
 
                 return Ok(clientDTO);
