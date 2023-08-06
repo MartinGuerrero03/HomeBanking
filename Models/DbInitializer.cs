@@ -216,6 +216,47 @@ namespace HomeBanking.Models
                 context.SaveChanges();
             }
 
+            //Datos de prueba para entidad Card:
+            if (!context.Cards.Any()) 
+            {
+                var clientMartin = context.Clients.FirstOrDefault(c => c.Email == "martin@gmail.com");
+                if (clientMartin != null) 
+                {
+                    var cards = new Card[]
+                    {
+                        new Card
+                        {
+                            CardHolder = clientMartin.FirstName + " " + clientMartin.LastName,
+                            Type = CardType.DEBIT.ToString(),
+                            Color = CardColor.GOLD.ToString(),
+                            Number = "3325-6745-7876-4445",
+                            Cvv = 990,
+                            FromDate = DateTime.Now,
+                            ThruDate = DateTime.Now.AddYears(4),
+                            ClientId = clientMartin.Id
+                        },
+
+                        new Card
+                        {
+                            CardHolder = clientMartin.FirstName + " " + clientMartin.LastName,
+                            Type = CardType.CREDIT.ToString(),
+                            Color = CardColor.TITANIUM.ToString(),
+                            Number = "2234-6745-552-7888",
+                            Cvv = 750,
+                            FromDate = DateTime.Now,
+                            ThruDate = DateTime.Now.AddYears(5),
+                            ClientId = clientMartin.Id
+                        },
+
+                    };
+                    foreach (Card card in cards)
+                    {
+                        context.Cards.Add(card);
+                    }
+                    context.SaveChanges();
+                }
+            }
+
         }
     }
 }

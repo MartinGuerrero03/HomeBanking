@@ -15,6 +15,7 @@ namespace HomeBanking.Repositories
         {
             return FindByCondition(client => client.Id == id)
                 .Include(client => client.Accounts)
+                .Include(client => client.Cards)
                 .Include(client => client.ClientLoans)
                 .ThenInclude(clientloan => clientloan.Loan)
                 .FirstOrDefault();
@@ -23,6 +24,7 @@ namespace HomeBanking.Repositories
         public IEnumerable<Client> GetAllClients()
         {
             return FindAll().Include(client => client.Accounts)
+                .Include(client => client.Cards)
                 .Include(client => client.ClientLoans)
                 .ThenInclude(clientloan => clientloan.Loan)
                 .ToList();
