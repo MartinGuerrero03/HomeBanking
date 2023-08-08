@@ -217,10 +217,10 @@ namespace HomeBanking.Models
             }
 
             //Datos de prueba para entidad Card:
-            if (!context.Cards.Any()) 
+            if (!context.Cards.Any())
             {
                 var clientMartin = context.Clients.FirstOrDefault(c => c.Email == "martin@gmail.com");
-                if (clientMartin != null) 
+                if (clientMartin != null)
                 {
                     var cards = new Card[]
                     {
