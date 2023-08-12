@@ -6,6 +6,9 @@ using Microsoft.AspNetCore.Mvc;
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Net;
+using System.Security.Principal;
+using System.Text.RegularExpressions;
 
 namespace HomeBanking.Controllers
 {
@@ -14,9 +17,17 @@ namespace HomeBanking.Controllers
     public class ClientsController : ControllerBase
     {
         private IClientRepository _clientRepository;
-        public ClientsController(IClientRepository clientRepository)
+        //private IAccountRepository _accountRepository;
+        //private ICardRepository _cardRepository;
+        private AccountsController _accountsController;
+        private CardsController _cardsController;
+        public ClientsController(IClientRepository clientRepository, AccountsController accountsController, CardsController cardsController)
         {
             _clientRepository = clientRepository;
+            _accountsController = accountsController;
+            _cardsController = cardsController;
+            //_accountRepository = accountRepository;
+            //_cardRepository = cardRepository;
         }
 
         [HttpGet]
@@ -43,7 +54,7 @@ namespace HomeBanking.Controllers
                             Number = ac.Number
                         }).ToList(),
                         //Prestamos:
-                        Credits = client.ClientLoans.Select(cl => new ClientLoanDTO 
+                        Credits = client.ClientLoans.Select(cl => new ClientLoanDTO
                         {
                             Id = cl.Id,
                             LoanId = cl.LoanId,
@@ -133,21 +144,19 @@ namespace HomeBanking.Controllers
         }
 
         [HttpGet("current")]
-        public IActionResult GetCurrent() 
+        public IActionResult GetCurrent()
         {
-            try 
+            try
             {
+                //Se obtiene el cliente con sesion iniciada
                 string email = User.FindFirst("Client") != null ? User.FindFirst("Client").Value : string.Empty;
                 if (email == string.Empty)
-                {
                     return Forbid();
-                }
 
+                //Verificar si existe el usuario
                 Client client = _clientRepository.FindByEmail(email);
                 if (client == null)
-                {
                     return Forbid();
-                }
 
                 var clientDTO = new ClientDTO
                 {
@@ -155,14 +164,14 @@ namespace HomeBanking.Controllers
                     Email = client.Email,
                     FirstName = client.FirstName,
                     LastName = client.LastName,
-                    Accounts = client.Accounts.Select(ac => new AccountDTO 
+                    Accounts = client.Accounts.Select(ac => new AccountDTO
                     {
                         Id = ac.Id,
                         Balance = ac.Balance,
                         CreationDate = ac.CreationDate,
                         Number = ac.Number
                     }).ToList(),
-                    Credits = client.ClientLoans.Select(cl => new ClientLoanDTO 
+                    Credits = client.ClientLoans.Select(cl => new ClientLoanDTO
                     {
                         Id = cl.Id,
                         LoanId = cl.LoanId,
@@ -185,15 +194,15 @@ namespace HomeBanking.Controllers
 
                 return Ok(clientDTO);
             }
-            catch (Exception ex) 
+            catch (Exception ex)
             {
                 return StatusCode(500, ex.Message);
             }
         }
 
-        //Registrar Cliente
+        //Registrar Cliente y crearle Account automaticamente
         [HttpPost]
-        public IActionResult Post([FromBody] Client client)
+        public IActionResult PostClient([FromBody] Client client)
         {
             try
             {
@@ -201,13 +210,10 @@ namespace HomeBanking.Controllers
                 if (String.IsNullOrEmpty(client.Email) || String.IsNullOrEmpty(client.Password) || String.IsNullOrEmpty(client.FirstName) || String.IsNullOrEmpty(client.LastName))
                     return StatusCode(403, "datos inválidos");
 
-                //buscamos si ya existe el usuario
+                //Verificar si ya existe el usuario
                 Client user = _clientRepository.FindByEmail(client.Email);
-
                 if (user != null)
-                {
                     return StatusCode(403, "Email está en uso");
-                }
 
                 Client newClient = new Client
                 {
@@ -218,6 +224,8 @@ namespace HomeBanking.Controllers
                 };
 
                 _clientRepository.Save(newClient);
+
+                _accountsController.Post(newClient.Id);
                 return Created("", newClient);
 
             }
@@ -226,6 +234,150 @@ namespace HomeBanking.Controllers
                 return StatusCode(500, ex.Message);
             }
         }
+
+        //Crear account:
+        [HttpPost("current/accounts")]
+        public IActionResult PostAccounts()
+        {
+            try
+            {
+                //Se obtiene el cliente con sesion iniciada
+                string email = User.FindFirst("Client") != null ? User.FindFirst("Client").Value : string.Empty;
+                if (email == null)
+                    return Forbid();
+
+                //Verificar si existe el usuario
+                Client client = _clientRepository.FindByEmail(email);
+                if (client == null)
+                    return Forbid();
+
+                if (client.Accounts.Count > 2)
+                    return StatusCode(403, "El cliente ya posee el limite de cuentras registradas.");
+
+                //Recibo la cuenta creada por el AccountController;
+                AccountDTO newAccDTO = _accountsController.Post(client.Id);
+                if (newAccDTO == null)
+                    return StatusCode(500, "Error");
+
+                return Created("", newAccDTO);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
+
+        //Crea una Card al cliente activo
+        [HttpPost("current/cards")]
+        public IActionResult PostCards([FromBody] Card card)
+        {
+            //Se obtiene el cliente con sesion iniciada
+            string email = User.FindFirst("Client") != null ? User.FindFirst("Client").Value : string.Empty;
+            if (email == null)
+                return Forbid();
+
+            //Verificar si ya existe el usuario
+            Client client = _clientRepository.FindByEmail(email);
+            if (client == null)
+                return Forbid();
+
+            //Verificar si el cliente ya tiene el limite de Cards segun el tipo
+            int cantCards = 0;
+            string cardType = card.Type;
+
+            foreach (Card cCard in client.Cards)
+            {
+                if (cCard.Type == cardType)
+                    cantCards++;
+            }
+
+            if (cantCards > 2)
+                return StatusCode(403, "El cliente ya posee el limite de tarjetas registradas.");
+            //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+
+            if (String.IsNullOrEmpty(card.Type) || String.IsNullOrEmpty(card.Color))
+                return StatusCode(403, "Seleccione Tipo y Color");
+
+            CardDTO newCardDTO = _cardsController.Post($"{client.FirstName} {client.LastName}", card.Type, card.Color, client.Id);
+
+            if (newCardDTO == null)
+                return StatusCode(500, "Error");
+
+            return Created("", newCardDTO);
+        }
+
+        //JSON con las Cards del cliente activo
+        [HttpGet("current/cards")]
+        public IActionResult GetClientCards()
+        {
+            try
+            {
+                //Se obtiene el cliente con sesion iniciada
+                string email = User.FindFirst("Client") != null ? User.FindFirst("Client").Value : string.Empty;
+                if (email == string.Empty)
+                    return Forbid();
+
+                //Verificar si existe el usuario
+                Client client = _clientRepository.FindByEmail(email);
+                if (client == null)
+                    return Forbid();
+
+                //var newCardsDTO = _cardsController.GetCardsByClient(client.Id);
+
+                //if (newCardsDTO == null)
+                //    return StatusCode(500, "Error");
+
+                var newCardsDTO = client.Cards.Select(cd => new CardDTO 
+                {
+                    Id = cd.Id,
+                    CardHolder = cd.CardHolder,
+                    Type = cd.Type,
+                    Color = cd.Color,
+                    Number = cd.Number,
+                    Cvv = cd.Cvv,
+                    FromDate = cd.FromDate,
+                    ThruDate = cd.ThruDate,
+                }).ToList();
+
+                return Ok(newCardsDTO);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+
+        }
+
+        //JSON con las Accounts del cliente activo
+        [HttpGet("current/accounts")]
+        public IActionResult GetClientAccounts()
+        {
+            try
+            {
+                //Se obtiene el cliente con sesion iniciada
+                string email = User.FindFirst("Client") != null ? User.FindFirst("Client").Value : string.Empty;
+                if (email == string.Empty)
+                    return Forbid();
+
+                //Verificar si existe el usuario
+                Client client = _clientRepository.FindByEmail(email);
+                if (client == null)
+                    return Forbid();
+
+                var newAccountsDTO = _accountsController.GetAccountsByClient(client.Id);
+
+                if (newAccountsDTO == null)
+                    return StatusCode(500, "Error");
+
+                return Ok(newAccountsDTO);
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, ex.Message);
+            }
+        }
+
 
     }
 }

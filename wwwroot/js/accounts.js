@@ -2,6 +2,8 @@ var app = new Vue({
     el:"#app",
     data:{
         clientInfo: {},
+        accounts: [],
+        credits: [],
         //error: null
         errorToats: null,
         errorMsg: null,
@@ -13,6 +15,8 @@ var app = new Vue({
             .then(function (response) {
                 //get client ifo
                 app.clientInfo = response.data;
+                app.accounts = response.data.accounts.$values;
+                app.credits = response.data.credits.$values;
             })
             .catch(function (error) {
                 // handle error
@@ -32,6 +36,14 @@ var app = new Vue({
                     this.errorToats.show();
                 })
         },
+        create: function(){
+            axios.post('/api/clients/current/accounts')
+            .then(response => window.location.reload())
+            .catch((error) =>{
+                this.errorMsg = error.response.data;  
+                this.errorToats.show();
+            })
+        }        
     },
     mounted: function () {
         this.errorToats = new bootstrap.Toast(document.getElementById('danger-toast'));
