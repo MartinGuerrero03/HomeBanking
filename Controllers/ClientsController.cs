@@ -200,6 +200,30 @@ namespace HomeBanking.Controllers
             }
         }
 
+        //Validar nombre y apellido
+        public bool ValidateName(string nombre)
+        {
+            //Solo puede contener letras y por lo menos 3 caracteres
+            string patron = @"^[a-zA-Z]{3,}$";
+            return Regex.IsMatch(nombre, patron);
+        }
+
+        //Validar Email 
+        public bool ValidateEmail(string email)
+        {
+            string patron = @"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,4}$";
+            return Regex.IsMatch(email, patron);
+        }
+
+        //Validar Password
+        //public bool ValidatePassword(string password)
+        //{
+        // contiene al menos 8 caracteres,una mayúscula, una minúscula y un número.
+        //string pattern = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$";
+        //return Regex.IsMatch(password, pattern);
+
+        //}
+
         //Registrar Cliente y crearle Account automaticamente
         [HttpPost]
         public IActionResult PostClient([FromBody] Client client)
@@ -214,6 +238,49 @@ namespace HomeBanking.Controllers
                 Client user = _clientRepository.FindByEmail(client.Email);
                 if (user != null)
                     return StatusCode(403, "Email está en uso");
+
+                //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                //Validar Nombre
+                bool name = ValidateName(client.FirstName);
+                //Validar Apellido
+                bool lastname = ValidateName(client.LastName);
+                if (name != true || lastname != true) 
+                    return StatusCode(403, "No utilizar numeros ni caracteres especiales");
+                //Validar Email
+                bool email = ValidateEmail(client.Email);
+                if (email != true)
+                    return StatusCode(403, "Direccion de Email invalida");
+
+                //Validar Password:
+                if(client.Password.Length < 8)
+                    return StatusCode(403, "La contraseña debe contener al menos 8 caracteres");
+                
+                bool mayus = false;
+                bool minus = false;
+                bool num = false;
+                foreach (Char c in client.Password)
+                {
+                    if (char.IsUpper(c))
+                    {
+                        mayus = true;
+                    }
+                    if (char.IsLower(c))
+                    {
+                        minus = true;
+                    }
+                    if (char.IsDigit(c))
+                    {
+                        num = true;
+                    }
+                }
+                if (mayus == false)
+                    return StatusCode(403, "La contraseña debe contener al menos una mayuscula");
+                if (minus == false)
+                    return StatusCode(403, "La contraseña debe contener al menos una minuscula");
+                if (num == false)
+                    return StatusCode(403, "La contraseña debe contener al menos un numero");
+                
+                //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
 
                 Client newClient = new Client
                 {
@@ -244,12 +311,12 @@ namespace HomeBanking.Controllers
                 //Se obtiene el cliente con sesion iniciada
                 string email = User.FindFirst("Client") != null ? User.FindFirst("Client").Value : string.Empty;
                 if (email == null)
-                    return Forbid();
+                    return Forbid("Email vacio");
 
                 //Verificar si existe el usuario
                 Client client = _clientRepository.FindByEmail(email);
                 if (client == null)
-                    return Forbid();
+                    return Forbid("El cliente no existe");
 
                 if (client.Accounts.Count > 2)
                     return StatusCode(403, "El cliente ya posee el limite de cuentras registradas.");
@@ -286,17 +353,17 @@ namespace HomeBanking.Controllers
             int cantCards = 0;
             string cardType = card.Type;
 
-            foreach (Card cCard in client.Cards)
+            foreach (Card cd in client.Cards)
             {
-                if (cCard.Type == cardType)
+                if (cd.Type == cardType)
                     cantCards++;
             }
 
             if (cantCards > 2)
-                return StatusCode(403, "El cliente ya posee el limite de tarjetas registradas.");
-            //>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>
+                return StatusCode(403, "Ya posee 3 tarjetas del mismo tipo.");
 
-            if (String.IsNullOrEmpty(card.Type) || String.IsNullOrEmpty(card.Color))
+            if (String.IsNullOrEmpty(card.Type) || String.IsNullOrEmpty(card.Color) || 
+                !Enum.IsDefined(typeof(CardType), card.Type) || !Enum.IsDefined(typeof(CardColor), card.Color))
                 return StatusCode(403, "Seleccione Tipo y Color");
 
             CardDTO newCardDTO = _cardsController.Post($"{client.FirstName} {client.LastName}", card.Type, card.Color, client.Id);
@@ -322,11 +389,6 @@ namespace HomeBanking.Controllers
                 Client client = _clientRepository.FindByEmail(email);
                 if (client == null)
                     return Forbid();
-
-                //var newCardsDTO = _cardsController.GetCardsByClient(client.Id);
-
-                //if (newCardsDTO == null)
-                //    return StatusCode(500, "Error");
 
                 var newCardsDTO = client.Cards.Select(cd => new CardDTO 
                 {
@@ -365,10 +427,21 @@ namespace HomeBanking.Controllers
                 if (client == null)
                     return Forbid();
 
-                var newAccountsDTO = _accountsController.GetAccountsByClient(client.Id);
-
-                if (newAccountsDTO == null)
-                    return StatusCode(500, "Error");
+                var newAccountsDTO = client.Accounts.Select(ac => new AccountDTO 
+                { 
+                    Id = ac.Id,
+                    Number = ac.Number,
+                    CreationDate = ac.CreationDate,
+                    Balance = ac.Balance,
+                    //Transactions = ac.Transactions.Select(ts => new TransactionDTO 
+                    //{
+                    //    Id = ts.Id,
+                    //    Type = ts.Type,
+                    //    Amount = ts.Amount,
+                    //    Description = ts.Description,
+                    //    Date = ts.Date,
+                    //}).ToList(),
+                }).ToList();
 
                 return Ok(newAccountsDTO);
             }

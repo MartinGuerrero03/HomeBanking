@@ -89,45 +89,6 @@ namespace HomeBanking.Controllers
             }
         }
 
-        [HttpGet]
-        public IActionResult GetAccountsByClient(long clientId)
-        {
-            try 
-            {
-                var accounts = _accountRepository.GetByClient(clientId);
-                if (accounts == null)
-                    return Forbid();
-
-                var accountsDTO = new List<AccountDTO>();
-
-                foreach (Account account in accounts) 
-                {
-                    var newAccountDTO = new AccountDTO
-                    {
-                        Id = account.Id,
-                        Number = account.Number,
-                        CreationDate = account.CreationDate,
-                        Balance = account.Balance,
-                        Transactions = account.Transactions.Select(ts => new TransactionDTO
-                        {
-                            Id = ts.Id,
-                            Type = ts.Type,
-                            Amount = ts.Amount,
-                            Description = ts.Description,
-                            Date = ts.Date,
-                        }).ToList()
-                    };
-                    accountsDTO.Add(newAccountDTO);
-                }
-                return Ok(accountsDTO);
-            }
-            catch (Exception ex) 
-            {
-                return StatusCode(500, ex.Message);
-            }
-
-        }
-
         //Creacion de cuenta:
         [HttpPost]
         public AccountDTO Post(long clientId) 
