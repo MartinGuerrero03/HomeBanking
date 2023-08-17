@@ -215,15 +215,6 @@ namespace HomeBanking.Controllers
             return Regex.IsMatch(email, patron);
         }
 
-        //Validar Password
-        //public bool ValidatePassword(string password)
-        //{
-        // contiene al menos 8 caracteres,una mayúscula, una minúscula y un número.
-        //string pattern = @"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$";
-        //return Regex.IsMatch(password, pattern);
-
-        //}
-
         //Registrar Cliente y crearle Account automaticamente
         [HttpPost]
         public IActionResult PostClient([FromBody] Client client)
@@ -344,7 +335,7 @@ namespace HomeBanking.Controllers
             if (email == null)
                 return Forbid();
 
-            //Verificar si ya existe el usuario
+            //Verificar si existe el usuario
             Client client = _clientRepository.FindByEmail(email);
             if (client == null)
                 return Forbid();
